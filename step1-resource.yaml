@@ -1,0 +1,3 @@
+Resources:
+ S3Bucket:
+  Type: AWS::s3::Bucket 
