@@ -1,12 +1,37 @@
 Parameters:
  BucketNameParameter:
   Type: String
-  Description: 'A ucket Name to be set'
+  Description: 'A bucket Name to be set'
 
+ Enviroment:
+  Type: String
+  AllowedValues:
+    - Dev
+    - Test
+    - Prod
+  Description: 'Select Enviroment' 
+
+
+Mappings:
+ EnviromentToBucketSuffix:
+  Dev:
+   Suffix: 'this-is-dev'
+  Test:
+   Suffix: 'for-testing'
+  Prod:
+   Suffix: 'Be-careful-prod'
 
 
 Resources:
  S3Bucket:
   Type: AWS::S3::Bucket 
   Properties:
-   BucketName: !Ref BucketNameParameter
+   BucketName: !Join [ '-' [
+    !Ref BucketNameParameter, !FindInMap [
+       EnviromentToBucketSuffix,
+       !Ref Enviroment,
+       Suffix
+    ]
+   ]
+
+   ]
