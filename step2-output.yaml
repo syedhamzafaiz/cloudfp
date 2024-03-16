@@ -6,5 +6,5 @@ Resources:
 
 Outputs:
   BucketARN:
-  Description: 'ARN of the bucket'
-  Vlaue : !GetAtt S3Bucket.Arn
+   Description: 'ARN of the bucket'
+   Vlaue : !GetAtt S3Bucket.Arn
