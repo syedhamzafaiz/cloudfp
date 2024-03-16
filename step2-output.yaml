@@ -1,10 +1,10 @@
 Resources:
- S3Bucket:
+ CFS2:
   Type: AWS::S3::Bucket 
   Properties:
-   BucketName: 'bucket-2'
+   BucketName: 'bkt-ilmenau-2'
 
 Outputs:
   BucketARN:
    Description: 'ARN of the bucket'
-   Value : !GetAtt S3Bucket.Arn
+   Value : !GetAtt CFS2.Arn
