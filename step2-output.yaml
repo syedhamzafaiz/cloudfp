@@ -1,0 +1,10 @@
+Resources:
+ S3Bucket:
+  Type: AWS::S3::Bucket 
+  Properties:
+   BucketName: 'bucket-2'
+
+  Output:
+   BucketARN:
+    Description: 'ARN of the bucket'
+    Vlaue : !GetAtt S3Bucket.Arn
