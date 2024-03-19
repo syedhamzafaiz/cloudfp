@@ -1,66 +1,96 @@
-
-
 # defining parameters to be used as ref 
 Parameters:
- EnviromentName:
-  Description: resource name
-  Type: String
+  EnvironmentName:
+    Description: resource name
+    Type: String
 
- VpcCIDR:
-  Description: ip range 
-  Type: String
-  Default: 10.195.0.0/16
-  
- PublicSubnet1CIDR:
-  Description: 1st public subnet ip range in 1st AZ
-  Type: String
-  Default: 10.195.10.0/24
+  VpcCIDR:
+    Description: ip range 
+    Type: String
+    Default: 10.195.0.0/16
 
- PublicSubnet2CIDR:
-  Description: 2nd public subnet ip range in 2nd AZ
-  Type: String
-  Default: 10.195.11.0/24
+  PublicSubnet1CIDR:
+    Description: 1st public subnet ip range in 1st AZ
+    Type: String
+    Default: 10.195.10.0/24
 
- PrivateSubnet1CIDR:
-  Description: 1st private subnet ip range in 1st AZ
-  Type: String
-  Default: 10.195.20.0/24
+  PublicSubnet2CIDR:
+    Description: 2nd public subnet ip range in 2nd AZ
+    Type: String
+    Default: 10.195.11.0/24
 
- PrivateSubnet2CIDR:
-  Description: 2nd private subnet ip range in 2st AZ
-  Type: String
-  Default: 10.195.21.0/24
+  PrivateSubnet1CIDR:
+    Description: 1st private subnet ip range in 1st AZ
+    Type: String
+    Default: 10.195.20.0/24
 
-#creating vpc
+  PrivateSubnet2CIDR:
+    Description: 2nd private subnet ip range in 2nd AZ
+    Type: String
+    Default: 10.195.21.0/24
+
+#creating vpc , and iam role to be used by vpc
 Resources:
+
+ CloudFormationRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: CloudFormationExecutionRole
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: sts:AssumeRole
+      Policies:
+        - PolicyName: CloudFormationPolicy
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:*
+                  - ec2:Describe*
+                  - ec2:Create*
+                  - ec2:Delete*
+                  - ec2:Modify*
+                  - iam:PassRole
+                  - iam:GetRole
+                  - iam:CreateRole
+                  - iam:AttachRolePolicy
+                  - iam:PutRolePolicy
+                Resource: '*'
+
+# creating vpc
  VPC:
   Type: AWS::EC2::VPC
   Properties:
-   CidrBlock: !Ref VpcCIDR
-   EnableDnsSupport: true
-   EnableDnsHostnames: true
-   Tags:
-    - Key: name
-      Value: !Ref EnviromentName
-
-# creating internet gateway
-
- InternetGateway:
-  Type: AWS::EC2::InternetGateway
-  Properties:
+    CidrBlock: !Ref VpcCIDR
+    EnableDnsSupport: true
+    EnableDnsHostnames: true
     Tags:
-      - Key: Name
+      - Key: name
         Value: !Ref EnvironmentName
+    
 
-# attaching gateway with vpc
-  InternetGatewayAttachment:
+  # creating internet gateway
+ InternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: Name
+          Value: !Ref EnvironmentName
+
+  # attaching gateway with vpc
+ InternetGatewayAttachment:
     Type: AWS::EC2::VPCGatewayAttachment
     Properties:
       InternetGatewayId: !Ref InternetGateway
       VpcId: !Ref VPC
 
-#creating public subnet 1
-  PublicSubnet1:
+  #creating public subnet 1
+ PublicSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -71,9 +101,8 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Public Subnet (AZ1)
 
-
-#creating public subnet 2
-  PublicSubnet2:
+  #creating public subnet 2
+ PublicSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -84,9 +113,8 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Public Subnet (AZ2)
 
-
-#creating 2 private subnets 
-  PrivateSubnet1:
+  #creating 2 private subnets 
+ PrivateSubnet1:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -97,7 +125,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Private Subnet (AZ1)
 
-  PrivateSubnet2:
+ PrivateSubnet2:
     Type: AWS::EC2::Subnet
     Properties:
       VpcId: !Ref VPC
@@ -108,35 +136,34 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Private Subnet (AZ2)
 
-#creating elastic ip for nat gateway
-  NatGateway1EIP:
+  #creating elastic ip for nat gateway
+ NatGateway1EIP:
     Type: AWS::EC2::EIP
     DependsOn: InternetGatewayAttachment
     Properties:
       Domain: vpc
 
-  NatGateway2EIP:
+ NatGateway2EIP:
     Type: AWS::EC2::EIP
     DependsOn: InternetGatewayAttachment
     Properties:
       Domain: vpc
 
-#creating nat gateway and assigning elastic ip
-  NatGateway1:
+  #creating nat gateway and assigning elastic ip
+ NatGateway1:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway1EIP.AllocationId
       SubnetId: !Ref PublicSubnet1
 
-  NatGateway2:
+ NatGateway2:
     Type: AWS::EC2::NatGateway
     Properties:
       AllocationId: !GetAtt NatGateway2EIP.AllocationId
       SubnetId: !Ref PublicSubnet2
 
-
-# creating 1 public route table , will add default public route and will attach our two public subnets to public route table
-  PublicRouteTable:
+  # creating 1 public route table , will add default public route and will attach our two public subnets to public route table
+ PublicRouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
@@ -144,7 +171,7 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Public Routes
 
-  DefaultPublicRoute:
+ DefaultPublicRoute:
     Type: AWS::EC2::Route
     DependsOn: InternetGatewayAttachment
     Properties:
@@ -152,22 +179,20 @@ Resources:
       DestinationCidrBlock: 0.0.0.0/0
       GatewayId: !Ref InternetGateway
 
-  PublicSubnet1RouteTableAssociation:
+ PublicSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet1
 
-  PublicSubnet2RouteTableAssociation:
+ PublicSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PublicRouteTable
       SubnetId: !Ref PublicSubnet2
 
-
-
-# creating 1 private route table , adding default route to natgateway1 , attaching 1 private subnet to it
-  PrivateRouteTable1:
+  # creating 1 private route table , adding default route to natgateway1 , attaching 1 private subnet to it
+ PrivateRouteTable1:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
@@ -175,22 +200,21 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Private Routes (AZ1)
 
-  DefaultPrivateRoute1:
+ DefaultPrivateRoute1:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRouteTable1
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway1
 
-  PrivateSubnet1RouteTableAssociation:
+ PrivateSubnet1RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable1
       SubnetId: !Ref PrivateSubnet1
 
-
-# creating 2 private route table , adding default route to natgateway2 , attaching 2 private subnet to it
-  PrivateRouteTable2:
+  # creating 2 private route table , adding default route to natgateway2 , attaching 2 private subnet to it
+ PrivateRouteTable2:
     Type: AWS::EC2::RouteTable
     Properties:
       VpcId: !Ref VPC
@@ -198,30 +222,28 @@ Resources:
         - Key: Name
           Value: !Sub ${EnvironmentName} Private Routes (AZ2)
 
-  DefaultPrivateRoute2:
+ DefaultPrivateRoute2:
     Type: AWS::EC2::Route
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
       DestinationCidrBlock: 0.0.0.0/0
       NatGatewayId: !Ref NatGateway2
 
-  PrivateSubnet2RouteTableAssociation:
+ PrivateSubnet2RouteTableAssociation:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
       RouteTableId: !Ref PrivateRouteTable2
       SubnetId: !Ref PrivateSubnet2
 
-
-#all incoming traffic to vpc are allowwed
-  NoIngressSecurityGroup:
+  #all incoming traffic to vpc are allowed
+ NoIngressSecurityGroup:
     Type: AWS::EC2::SecurityGroup
     Properties:
       GroupName: "no-ingress-sg"
       GroupDescription: "Security group with no ingress rule"
       VpcId: !Ref VPC
 
-
-# we can check the outputs 
+# we can check the outputs  
 Outputs:
   VPC:
     Description: A reference to the created VPC
@@ -254,11 +276,3 @@ Outputs:
   NoIngressSecurityGroup:
     Description: Security group with no ingress rule
     Value: !Ref NoIngressSecurityGroup
-
-
-
-  
-  
-
- 
-
