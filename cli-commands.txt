@@ -1,0 +1,6 @@
+docker exec -it 0643c7e86e54 bash
+cd keycloak/bin
+docker exec -it {contaierID} bash
+cd keycloak/bin
+./kcadm.sh config credentials --server http://172.24.0.3:8080/auth --realm master --user admin
+./kcadm.sh update realms/master -s sslRequired=NONE
