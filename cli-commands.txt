@@ -4,3 +4,79 @@ docker exec -it {contaierID} bash
 cd keycloak/bin
 ./kcadm.sh config credentials --server http://172.24.0.3:8080/auth --realm master --user admin
 ./kcadm.sh update realms/master -s sslRequired=NONE
+
+
+
+
+
+### important explatnation 
+https://www.youtube.com/watch?v=_5a_r7iBC6Q
+https://janikvonrotz.ch/2021/03/08/08-upgrade-keycloak-docker-container/        upgrade
+
+
+
+##dump
+docker exec 363a184a994a pg_dump -U keycloak -F t keycloak > initial-bkp.tar
+docker cp mydb.tar <container-name>:/     to other container 
+
+connect postgress db of other container 
+docker exec -it <container-name> psql -U <mydbUser> 
+
+restore
+pg_restore -U <mydbUser> -C -d <mydbName> mydb.tar
+
+
+############### key coak prod ###### ytguy
+
+FROM quay.io/keycloak/keycloak:latest as builder
+
+ENV KC_HEALTH_ENABLED=true
+ENV KC_METRICS_ENABLED=true
+ENV KC_FEATURES=token-exchange
+ENV KC_DB=mysql
+# Install custom providers
+RUN curl -sL https://github.com/aerogear/keycloak-metrics-spi/releases/download/2.5.3/keycloak-metrics-spi-2.5.3.jar -o /opt/keycloak/providers/keycloak-metrics-spi-2.5.3.jar
+
+RUN /opt/keycloak/bin/kc.sh build
+
+FROM quay.io/keycloak/keycloak:latest
+COPY --from=builder /opt/keycloak/ /opt/keycloak/
+WORKDIR /opt/keycloak
+# for demonstration purposes only, please make sure to use proper certificates in production instead
+RUN keytool -genkeypair -storepass password -storetype PKCS12 -keyalg RSA -keysize 2048 -dname "CN=server" -alias server -ext "SAN:c=DNS:localhost,IP:127.0.0.1" -keystore conf/server.keystore
+# change these values to point to a running postgres instance
+ENV KC_DB_URL=jdbc:mysql://mysql:3306/keycloak
+ENV KC_DB_USERNAME=keycloak
+ENV KC_DB_PASSWORD=password
+ENV KC_HOSTNAME=localhost
+ENTRYPOINT ["/opt/keycloak/bin/kc.sh", "start"]
+
+
+
+withMaven(maven: 'DEFAULT_MAVEN', options: [jacocoPublisher(disabled: true)], jdk: jdk) {
+              sh "echo 'Using JDK ${jdk}'"
+              sh "mvn ${arguments.join(" ")} -DCODEARTIFACT_TOKEN=$CODEARTIFACT_TOKEN"
+
+
+
+
+
+def call(List arguments = [], jdk = JAVA17) 
+{
+    script {
+        
+          withMaven(maven: 'DEFAULT_MAVEN', options: [jacocoPublisher(disabled: true)], jdk: jdk){ 
+              sh "echo 'Using JDK ${jdk}'"
+              mvn(["clean package",
+                 "-Dsha1=$GIT_COMMIT",
+                "--activate-profiles ginmon-internal"])
+        }
+    }
+}
+
+
+or  simple
+
+mvn(["clean package",
+                 "-Dsha1=$GIT_COMMIT",
+                "--activate-profiles ginmon-internal"], "JAVA17")
